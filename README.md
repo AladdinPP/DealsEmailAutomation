@@ -23,7 +23,6 @@ To run this project, you need Node.js, npm, and a free Supabase account.
 a new project.
 2. Create the Database Schema: Navigate to the SQL Editor in your Supabase 
    project and run the following SQL commands to create the necessary tables.
-
 ```sql
 CREATE TABLE retailers (
 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -64,6 +63,11 @@ This file will store your Supabase credentials securely.
 SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
 SUPABASE_ANON_KEY=YOUR_SUPABASE_PROJECT_ANON_KEY
 ```
+You will also need to add your Resend API key to this file:
+
+```dotenv
+RESEND_API_KEY=YOUR_RESEND_API_KEY
+```
 
 5. Install project dependencies: Run the following command from the 
    project's root directory.
@@ -82,10 +86,10 @@ emails being sent.
 With two more days of work, I would focus on turning this proof-of-concept
 into a more robust
 and production-ready system. My priorities would be:
-1. **Implement Resend API Integration**: Connect to the Resend API to send real 
-   emails instead of just logging to the console. This would involve using 
-   their SDK and handling API keys securely via environment variables.
-2. **Deploy as a Scheduled Function**: Use a serverless platform like Vercel or 
+1. **Deploy as a Scheduled Function**: Use a serverless platform like Vercel or 
    a cloud function (e.g., Google Cloud Functions) to schedule the 
    send:weekly script to run automatically on a weekly basis, completing the 
    automation loop.
+2. **Build a simple web scraper**: Create a simple web scraper that fetches 
+   deals from one of the retailers' websites. This will automate the data 
+   ingestion process instead of relying on manually updated JSON files.

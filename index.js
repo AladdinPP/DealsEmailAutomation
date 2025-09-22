@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
@@ -16,6 +17,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 /**
  * Generates and "sends" a personalized email to a single user.
  * @param {object} user The user object with their email and preferences.
@@ -24,7 +28,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function generateAndSendEmail(user, allDeals) {
     try {
         // Step 1: Filter deals based on user's preferred retailer IDs.
-        // This is the core personalization logic.
         const userDeals = allDeals.filter(deal =>
             user.preferred_retailer_ids.includes(deal.retailer.id)
         );
@@ -38,14 +41,21 @@ async function generateAndSendEmail(user, allDeals) {
         // Step 4: Render the email template with the personalized deals.
         const emailHtml = ejs.render(emailTemplate, { deals: topDeals, user });
 
-        // Step 5: Log the "sent" email to the console. In a real application,
-        // this is where an email SDK like Resend would be used.
-        console.log(`\n--- Sending email to: ${user.email} ---`);
-        console.log(`Subject: Your Weekly Deals from Prox`);
-        console.log(`\n[Mock Email HTML Content]\n`);
+        // Step 5: Send the email using the Resend API.
+        // The 'to' field is set to a verified email for testing purposes.
+        const { data, error } = await resend.emails.send({
+            from: 'Prox Weekly Deals <onboarding@resend.dev>',
+            to: 'simonhe1714@gmail.com',
+            subject: `Weekly Deals for ${user.email}`,
+            html: emailHtml,
+        });
 
+        if (error) {
+            console.error(`Error sending email to ${user.email}:`, error);
+        } else {
+            console.log(`Successfully sent email to ${user.email}.`);
+        }
     } catch (error) {
-        // Log any errors that occur during email generation.
         console.error(`Error generating email for ${user.email}:`, error);
     }
 }
@@ -127,9 +137,12 @@ async function runAutomation(supabase) {
 
         // Check if userData is defined and an array before looping
         if (userData && Array.isArray(userData)) {
-            userData.forEach(user => {
-                generateAndSendEmail(user, allDeals);
-            });
+            // Use a for...of loop with a delay to avoid rate limiting
+            for (const user of userData) {
+                await generateAndSendEmail(user, allDeals);
+                // Wait for a second to avoid the Resend rate limit
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         } else {
             console.error("User data is not available or not in the correct format.");
         }

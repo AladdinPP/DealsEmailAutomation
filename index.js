@@ -1,33 +1,30 @@
+// Required modules
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
-const fs = require('fs');
-const path = require('path');
 const ejs = require('ejs');
+const fs = require('fs');
 
-// Load sample data
-const sampleDealData = require('./deal_data.json');
-const sampleUserData = require('./user_data.json');
+// Environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const resendApiKey = process.env.RESEND_API_KEY;
+const verifiedEmail = process.env.VERIFIED_EMAIL;
 
-// Get the mock email template
-const emailTemplate = fs.readFileSync(path.join(__dirname, 'emailTemplate.html'), 'utf-8');
+// Supabase and Resend client initialization
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const resend = new Resend(resendApiKey);
 
-// Initialize Supabase client
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Sample data
+const sampleDealData = JSON.parse(fs.readFileSync('./deal_data.json', 'utf8'));
+const sampleUserData = JSON.parse(fs.readFileSync('./user_data.json', 'utf8'));
+const emailTemplate = fs.readFileSync('./emailTemplate.html', 'utf8');
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-/**
- * Generates and "sends" a personalized email to a single user.
- * @param {object} user The user object with their email and preferences.
- * @param {array} allDeals An array of all available deals from the database.
- */
+// Function to generate and "send" a personalized email to a single user
 async function generateAndSendEmail(user, allDeals) {
     try {
-        // Step 1: Filter deals based on user's preferred retailer IDs.
+        // Step 1: Filter deals based on user preferences.
+        // This is the core personalization logic.
         const userDeals = allDeals.filter(deal =>
             user.preferred_retailer_ids.includes(deal.retailer.id)
         );
@@ -35,36 +32,33 @@ async function generateAndSendEmail(user, allDeals) {
         // Step 2: Sort the filtered deals by price, from lowest to highest.
         userDeals.sort((a, b) => a.price - b.price);
 
-        // Step 3: Select the top 6 deals to feature in the email.
-        const topDeals = userDeals.slice(0, 6);
+        // NOTE: The previous version selected only the top 6 deals.
+        // As per the new requirement, we now send all available deals.
+        const allFilteredDeals = userDeals;
 
-        // Step 4: Render the email template with the personalized deals.
-        const emailHtml = ejs.render(emailTemplate, { deals: topDeals, user });
+        // Step 3: Render the email template with the personalized deals.
+        const emailHtml = ejs.render(emailTemplate, { deals: allFilteredDeals, user });
 
-        // Step 5: Send the email using the Resend API.
-        // The 'to' field is set to a verified email for testing purposes.
-        const { data, error } = await resend.emails.send({
+        // Step 4: Use Resend API to send the email.
+        await resend.emails.send({
             from: 'Prox Weekly Deals <onboarding@resend.dev>',
-            to: 'simonhe1714@gmail.com',
+            to: `simonhe1714@gmail.com`,
             subject: `Weekly Deals for ${user.email}`,
             html: emailHtml,
         });
 
-        if (error) {
-            console.error(`Error sending email to ${user.email}:`, error);
-        } else {
-            console.log(`Successfully sent email to ${user.email}.`);
-        }
+        // Step 5: Log the "sent" email to the console.
+        console.log(`\n--- Sending email to: ${user.email} ---`);
+        console.log(`Email sent successfully to ${verifiedEmail} (for ${user.email})`);
     } catch (error) {
-        console.error(`Error generating email for ${user.email}:`, error);
+        // Log any errors that occur during email generation or sending.
+        console.error(`Error sending email for ${user.email}:`, error);
+        console.error('Resend API Error:', error.message);
     }
 }
 
-/**
- * Main function to run the entire automation script.
- * @param {object} supabase The Supabase client object.
- */
-async function runAutomation(supabase) {
+// Main function to run the entire automation script.
+async function runAutomation() {
     try {
         console.log('Ingesting deal data into Supabase...');
 
@@ -115,7 +109,7 @@ async function runAutomation(supabase) {
             ).filter(id => id); // Filter out any null or undefined IDs
             return {
                 email: user.email,
-                preferred_retailer_ids
+                preferred_retailer_ids,
             };
         });
 
@@ -135,26 +129,36 @@ async function runAutomation(supabase) {
             `);
         if (dealsFetchError) throw dealsFetchError;
 
-        // Check if userData is defined and an array before looping
-        if (userData && Array.isArray(userData)) {
-            // Use a for...of loop with a delay to avoid rate limiting
-            for (const user of userData) {
-                await generateAndSendEmail(user, allDeals);
-                // Wait for a second to avoid the Resend rate limit
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-        } else {
-            console.error("User data is not available or not in the correct format.");
+        // Fetch users and their preferred retailer IDs
+        const { data: users, error: usersFetchError } = await supabase
+            .from('users')
+            .select('email, preferred_retailer_ids');
+        if (usersFetchError) throw usersFetchError;
+
+        // Fetch all retailers to map IDs to names
+        const { data: allRetailers, error: retailersFetchError } = await supabase
+            .from('retailers')
+            .select('id, name');
+        if (retailersFetchError) throw retailersFetchError;
+        const retailersMap = new Map(allRetailers.map(r => [r.id, r.name]));
+
+        // Process each user's email
+        for (const user of users) {
+            const preferred_retailers = user.preferred_retailer_ids.map(id => retailersMap.get(id)).filter(name => name);
+            await generateAndSendEmail(
+                {...user, preferred_retailers},
+                allDeals
+            );
+            // Add a 1-second delay to avoid Resend's rate limit
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         console.log('\nAutomation script finished.');
 
     } catch (err) {
         console.error('An error occurred during automation:', err);
-        // Exit with an error code
-        process.exit(1);
     }
 }
 
-// Run the automation script
-runAutomation(supabase);
+// Run the main function
+runAutomation();

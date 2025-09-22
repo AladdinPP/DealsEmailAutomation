@@ -1,179 +1,147 @@
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
-const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
-require('dotenv').config();
 
-// --- Supabase Setup ---
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// Load sample data
+const sampleDealData = require('./deal_data.json');
+const sampleUserData = require('./user_data.json');
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Error: Supabase credentials not found. Please create a .env file and add SUPABASE_URL and SUPABASE_ANON_KEY.');
-    process.exit(1);
-}
+// Get the mock email template
+const emailTemplate = fs.readFileSync(path.join(__dirname, 'emailTemplate.html'), 'utf-8');
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const dealDataPath = path.join(__dirname, 'deal_data.json');
-const userDataPath = path.join(__dirname, 'user_data.json');
-const emailTemplatePath = path.join(__dirname, 'emailTemplate.html');
+// Initialize Supabase client
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Loads and parses JSON data from a given file path.
- * @param {string} filePath - The path to the JSON file.
- * @returns {Array} - The parsed JSON data.
+ * Generates and "sends" a personalized email to a single user.
+ * @param {object} user The user object with their email and preferences.
+ * @param {array} allDeals An array of all available deals from the database.
  */
-function loadJsonData(filePath) {
+async function generateAndSendEmail(user, allDeals) {
     try {
-        const data = fs.readFileSync(filePath, 'utf8');
-        return JSON.parse(data);
-    } catch (err) {
-        console.error(`Error loading data from ${filePath}:`, err);
-        return [];
-    }
-}
+        // Step 1: Filter deals based on user's preferred retailer IDs.
+        // This is the core personalization logic.
+        const userDeals = allDeals.filter(deal =>
+            user.preferred_retailer_ids.includes(deal.retailer.id)
+        );
 
-/**
- * Ingests deal and user data into the Supabase database.
- */
-async function ingestData() {
-    console.log('Ingesting deal data into Supabase...');
+        // Step 2: Sort the filtered deals by price, from lowest to highest.
+        userDeals.sort((a, b) => a.price - b.price);
 
-    const dealsToIngest = loadJsonData(dealDataPath);
-    const usersToIngest = loadJsonData(userDataPath);
+        // Step 3: Select the top 6 deals to feature in the email.
+        const topDeals = userDeals.slice(0, 6);
 
-    // Ingest Retailers and Products
-    for (const deal of dealsToIngest) {
-        // Upsert retailer, ignoring duplicates
-        const { data: retailer, error: retailerError } = await supabase
-            .from('retailers')
-            .upsert({ name: deal.retailer }, { onConflict: 'name' })
-            .select()
-            .single();
+        // Step 4: Render the email template with the personalized deals.
+        const emailHtml = ejs.render(emailTemplate, { deals: topDeals, user });
 
-        if (retailerError && retailerError.code !== '23505') { // 23505 is duplicate key error
-            console.error('Error upserting retailer:', retailerError);
-            continue;
-        }
-
-        const retailerId = retailer ? retailer.id : (await supabase.from('retailers').select('id').eq('name', deal.retailer).single()).data.id;
-
-        // Upsert product, ignoring duplicates
-        const { data: product, error: productError } = await supabase
-            .from('products')
-            .upsert({ name: deal.product, size: deal.size, category: deal.category }, { onConflict: 'name' })
-            .select()
-            .single();
-
-        if (productError && productError.code !== '23505') {
-            console.error('Error upserting product:', productError);
-            continue;
-        }
-
-        const productId = product ? product.id : (await supabase.from('products').select('id').eq('name', deal.product).single()).data.id;
-
-        // Check for existing deal to prevent duplicates
-        const { data: existingDeal } = await supabase
-            .from('deals')
-            .select('id')
-            .eq('retailer_id', retailerId)
-            .eq('product_id', productId)
-            .eq('start_date', deal.start)
-            .single();
-
-        if (!existingDeal) {
-            // Insert new deal
-            const { error: dealError } = await supabase
-                .from('deals')
-                .insert({
-                    retailer_id: retailerId,
-                    product_id: productId,
-                    price: deal.price,
-                    start_date: deal.start,
-                    end_date: deal.end,
-                });
-
-            if (dealError) {
-                console.error('Error inserting deal:', dealError);
-            }
-        }
-    }
-
-    // Ingest Users
-    for (const user of usersToIngest) {
-        // Get retailer IDs for preferred retailers
-        const { data: preferredRetailers } = await supabase
-            .from('retailers')
-            .select('id')
-            .in('name', user.preferred_retailers);
-
-        const preferredRetailerIds = preferredRetailers.map(r => r.id);
-
-        // Upsert user, ignoring duplicates
-        const { error: userError } = await supabase
-            .from('users')
-            .upsert({
-                email: user.email,
-                preferred_retailer_ids: preferredRetailerIds
-            }, { onConflict: 'email' });
-
-        if (userError) {
-            console.error('Error upserting user:', userError);
-        }
-    }
-
-    console.log('Data ingestion complete.');
-}
-
-/**
- * Generates and sends mock emails to test recipients with filtered deals.
- */
-async function generateAndSendEmails() {
-    console.log('Generating and sending emails to test recipients...');
-
-    const { data: users, error: userError } = await supabase
-        .from('users')
-        .select('email, preferred_retailer_ids');
-
-    if (userError) {
-        console.error('Error fetching users:', userError);
-        return;
-    }
-
-    const emailTemplate = fs.readFileSync(emailTemplatePath, 'utf8');
-
-    for (const user of users) {
-        // Fetch deals for the user's preferred retailers
-        const { data: deals, error: dealsError } = await supabase
-            .from('deals')
-            .select('*, retailer:retailer_id(*), product:product_id(*)')
-            .in('retailer_id', user.preferred_retailer_ids)
-            .order('price', { ascending: true })
-            .limit(6);
-
-        if (dealsError) {
-            console.error('Error fetching deals for user:', user.email, dealsError);
-            continue;
-        }
-
-        const emailContent = ejs.render(emailTemplate, { deals });
-
-        // Mock email sending
+        // Step 5: Log the "sent" email to the console. In a real application,
+        // this is where an email SDK like Resend would be used.
         console.log(`\n--- Sending email to: ${user.email} ---`);
-        console.log('Subject: Your Weekly Deals from Prox');
-        console.log('[Mock Email HTML Content]');
+        console.log(`Subject: Your Weekly Deals from Prox`);
+        console.log(`\n[Mock Email HTML Content]\n`);
+
+    } catch (error) {
+        // Log any errors that occur during email generation.
+        console.error(`Error generating email for ${user.email}:`, error);
     }
 }
 
 /**
- * Main function to run the automation script.
+ * Main function to run the entire automation script.
+ * @param {object} supabase The Supabase client object.
  */
-async function main() {
-    await ingestData();
-    await generateAndSendEmails();
-    console.log('\nAutomation script finished.');
+async function runAutomation(supabase) {
+    try {
+        console.log('Ingesting deal data into Supabase...');
+
+        // Ingest retailers
+        const { data: retailerData, error: retailerError } = await supabase
+            .from('retailers')
+            .upsert(
+                sampleDealData.map(deal => ({ name: deal.retailer })),
+                { onConflict: 'name' }
+            )
+            .select();
+        if (retailerError) throw retailerError;
+        const retailers = new Map(retailerData.map(r => [r.name, r]));
+
+        // Ingest products
+        const { data: productData, error: productError } = await supabase
+            .from('products')
+            .upsert(
+                sampleDealData.map(deal => ({ name: deal.product, size: deal.size, category: deal.category })),
+                { onConflict: 'name' }
+            )
+            .select();
+        if (productError) throw productError;
+        const products = new Map(productData.map(p => [p.name, p]));
+
+        // Ingest deals
+        const dealsToInsert = sampleDealData.map(deal => ({
+            retailer_id: retailers.get(deal.retailer)?.id,
+            product_id: products.get(deal.product)?.id,
+            price: deal.price,
+            start_date: deal.start,
+            end_date: deal.end
+        }));
+
+        const { error: dealsError } = await supabase
+            .from('deals')
+            .upsert(dealsToInsert, { onConflict: ['retailer_id', 'product_id', 'start_date'] });
+        if (dealsError) throw dealsError;
+
+        console.log('Data ingestion complete.');
+
+        console.log('\nGenerating and sending emails to test recipients...');
+
+        // Ingest users
+        const usersToInsert = sampleUserData.map(user => {
+            const preferred_retailer_ids = user.preferred_retailers.map(retailerName =>
+                retailers.get(retailerName)?.id
+            ).filter(id => id); // Filter out any null or undefined IDs
+            return {
+                email: user.email,
+                preferred_retailer_ids
+            };
+        });
+
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .upsert(usersToInsert, { onConflict: 'email' })
+            .select();
+        if (userError) throw userError;
+
+        // Fetch all deals with their related product and retailer info
+        const { data: allDeals, error: dealsFetchError } = await supabase
+            .from('deals')
+            .select(`
+                *,
+                retailer:retailer_id (name),
+                product:product_id (name, size)
+            `);
+        if (dealsFetchError) throw dealsFetchError;
+
+        // Check if userData is defined and an array before looping
+        if (userData && Array.isArray(userData)) {
+            userData.forEach(user => {
+                generateAndSendEmail(user, allDeals);
+            });
+        } else {
+            console.error("User data is not available or not in the correct format.");
+        }
+
+        console.log('\nAutomation script finished.');
+
+    } catch (err) {
+        console.error('An error occurred during automation:', err);
+        // Exit with an error code
+        process.exit(1);
+    }
 }
 
-main();
+// Run the automation script
+runAutomation(supabase);

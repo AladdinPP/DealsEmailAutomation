@@ -1,0 +1,18 @@
+{
+  "name": "TrackA",
+  "version": "1.0.0",
+  "description": "An automated system for weekly deals emails.",
+  "main": "index.js",
+  "scripts": {
+    "send:weekly": "node index.js"
+  },
+  "keywords": [],
+  "author": "Hongru He",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.5",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "ejs": "^3.1.9"
+  }
+}

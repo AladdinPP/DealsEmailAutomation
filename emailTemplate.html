@@ -1,164 +1,124 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Weekly Deals from Prox</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #F4FBF8;
-            margin: 0;
-            padding: 0;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .header {
-            background-color: #0FB872;
-            color: #ffffff;
-            padding: 20px;
-            text-align: center;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        .content {
-            padding: 20px;
-        }
-        .content h2 {
-            color: #0A4D3C;
-            font-size: 20px;
-            margin-top: 0;
-        }
-        .deal-group {
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .deal-group h3 {
-            background-color: #f7f7f7;
-            color: #0A4D3C;
-            margin: 0;
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .deal {
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .deal:last-child {
-            border-bottom: none;
-        }
-        .deal-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .deal-details {
-            font-size: 14px;
-            color: #555555;
-        }
-        .price {
-            font-size: 18px;
-            font-weight: bold;
-            color: #0FB872;
-        }
-        .date {
-            font-size: 12px;
-            color: #999999;
-            margin-top: 5px;
-        }
-        .footer {
-            background-color: #F4FBF8;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #888888;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-        .footer a {
-            color: #0A4D3C;
-            text-decoration: none;
-        }
-        @media only screen and (max-width: 600px) {
-            .container {
-                margin: 0;
-                border-radius: 0;
-            }
-            .header, .footer {
-                border-radius: 0;
-            }
-        }
-    </style>
 </head>
-<body>
-<div class="container">
-    <div class="header">
-        <h1>Prox Weekly Deals</h1>
-    </div>
-    <div class="content">
-        <h2>Top Weekly Deals Just For You</h2>
-        <p>Here are the top 6 deals from your preferred retailers for this week. Happy shopping!</p>
-        <%
-        const sampleDeals = [
-        {"retailer": "Ralphs", "product": "Boneless Skinless Chicken Breasts", "size": "per lb", "price": 2.99, "start": "2025-09-01", "end": "2025-09-07", "category": "protein"},
-        {"retailer": "Vons", "product": "Seedless Grapes (Red/Green)", "size": "per lb", "price": 0.99, "start": "2025-09-01", "end": "2025-09-07", "category": "produce"},
-        {"retailer": "Smart & Final", "product": "Tide HE Liquid (170 fl oz)", "size": "170 fl oz", "price": 13.99, "start": "2025-09-01", "end": "2025-09-07", "category": "household"},
-        {"retailer": "Aldi", "product": "Organic Blackberries", "size": "6 oz", "price": 1.79, "start": "2025-09-01", "end": "2025-09-07", "category": "produce"},
-        {"retailer": "Whole Foods", "product": "Organic Avocados", "size": "each", "price": 1.49, "start": "2025-09-01", "end": "2025-09-07", "category": "produce"},
-        {"retailer": "Sprouts", "product": "Wild Caught Salmon Fillet", "size": "per lb", "price": 8.99, "start": "2025-09-01", "end": "2025-09-07", "category": "protein"},
-        {"retailer": "Walmart", "product": "Great Value Milk (Gallon)", "size": "1 gallon", "price": 2.78, "start": "2025-09-01", "end": "2025-09-07", "category": "dairy"},
-        {"retailer": "CVS", "product": "Charmin Ultra Soft (12 pack)", "size": "12 rolls", "price": 11.49, "start": "2025-09-01", "end": "2025-09-07", "category": "household"}
-        ].sort((a, b) => a.price - b.price); // Sort by lowest price
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background-color: #F4FBF8; margin: 0; padding: 0;">
 
-        // Group deals by retailer for clean display
-        const dealsByRetailer = sampleDeals.reduce((acc, deal) => {
-        if (!acc[deal.retailer]) {
-        acc[deal.retailer] = [];
+<div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+
+    <!-- Header -->
+    <div style="background-color: #0FB872; padding: 20px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; font-size: 28px; margin: 0; font-weight: bold;">
+            Prox Weekly Deals
+        </h1>
+    </div>
+
+    <!-- Body Content -->
+    <div style="padding: 30px;">
+        <h2 style="font-size: 24px; color: #0A4D3C; margin: 0 0 15px;">Top Weekly Deals Just For You</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #4a4a4a; margin-bottom: 25px;">
+            Here are the top deals from your preferred retailers for this week. Happy shopping!
+        </p>
+
+        <!-- Personalized Deals Section -->
+        <% if (deals.length > 0) { %>
+        <%
+        const dealsByRetailer = {};
+        deals.forEach(deal => {
+        const retailerName = deal.retailer.name;
+        if (!dealsByRetailer[retailerName]) {
+        dealsByRetailer[retailerName] = [];
         }
-        acc[deal.retailer].push(deal);
-        return acc;
-        }, {});
+        dealsByRetailer[retailerName].push(deal);
+        });
         %>
         <% for (const retailer in dealsByRetailer) { %>
-        <div class="deal-group">
-            <h3><%= retailer %></h3>
+        <div style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+            <h3 style="background-color: #f7f7f7; color: #0A4D3C; padding: 12px 15px; margin: 0; font-size: 18px;">
+                <%= retailer %>
+            </h3>
             <% dealsByRetailer[retailer].forEach(deal => { %>
-            <div class="deal">
-                <div class="deal-info">
-                    <div>
-                        <div class="deal-name"><%= deal.product %></div>
-                        <div class="deal-details"><%= deal.size %></div>
-                    </div>
-                    <div class="price">$<%= deal.price.toFixed(2) %></div>
+            <div style="padding: 15px; border-bottom: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-size: 16px; font-weight: bold; color: #0A4D3C;">
+                                        <%= deal.product.name %>
+                                    </span>
+                    <span style="font-size: 16px; font-weight: bold; color: #0FB872;">
+                                        $<%= deal.price.toFixed(2) %>
+                                    </span>
                 </div>
-                <div class="date">
-                    Valid: <%= new Date(deal.start).toLocaleDateString() %> - <%= new Date(deal.end).toLocaleDateString() %>
+                <div style="font-size: 14px; color: #666666;">
+                    <span>Size: <%= deal.product.size %></span><br>
+                    <span style="font-size: 12px; color: #999999;">Valid: <%= new Date(deal.start_date).toLocaleDateString() %> - <%= new Date(deal.end_date).toLocaleDateString() %></span>
                 </div>
             </div>
-            <% }) %>
+            <% }); %>
         </div>
         <% } %>
-    </div>
-    <div class="footer">
-        <p>
-            <a href="#">Manage preferences</a>
+        <% } else { %>
+        <p style="font-size: 16px; color: #666666; font-style: italic;">
+            We're sorry, there are no deals available from your preferred retailers this week. Check back soon!
         </p>
-        <p>You are receiving this email because you subscribed to Prox Weekly Deals.</p>
+        <% } %>
+
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+
+        <!-- All Deals Section -->
+        <h2 style="font-size: 24px; color: #0A4D3C; margin: 0 0 15px;">Top 6 Deals Overall</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #4a4a4a; margin-bottom: 25px;">
+            Here are the top 6 deals from all available retailers, sorted by lowest price.
+        </p>
+
+        <% if (topDeals.length > 0) { %>
+        <%
+        const topDealsByRetailer = {};
+        topDeals.forEach(deal => {
+        const retailerName = deal.retailer.name;
+        if (!topDealsByRetailer[retailerName]) {
+        topDealsByRetailer[retailerName] = [];
+        }
+        topDealsByRetailer[retailerName].push(deal);
+        });
+        %>
+        <% for (const retailer in topDealsByRetailer) { %>
+        <div style="border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; overflow: hidden;">
+            <h3 style="background-color: #f7f7f7; color: #0A4D3C; padding: 12px 15px; margin: 0; font-size: 18px;">
+                <%= retailer %>
+            </h3>
+            <% topDealsByRetailer[retailer].forEach(deal => { %>
+            <div style="padding: 15px; border-bottom: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-size: 16px; font-weight: bold; color: #0A4D3C;">
+                                        <%= deal.product.name %>
+                                    </span>
+                    <span style="font-size: 16px; font-weight: bold; color: #0FB872;">
+                                        $<%= deal.price.toFixed(2) %>
+                                    </span>
+                </div>
+                <div style="font-size: 14px; color: #666666;">
+                    <span>Size: <%= deal.product.size %></span><br>
+                    <span style="font-size: 12px; color: #999999;">Valid: <%= new Date(deal.start_date).toLocaleDateString() %> - <%= new Date(deal.end_date).toLocaleDateString() %></span>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+        <% } %>
+        <% } %>
     </div>
+
+    <!-- Footer -->
+    <div style="background-color: #F4FBF8; padding: 20px 30px; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e0e0e0;">
+        <p style="font-size: 14px; color: #888888; margin: 0;">
+            <a href="#" style="color: #0FB872; text-decoration: none; font-weight: bold;">Manage preferences</a>
+        </p>
+        <p style="font-size: 12px; color: #bbbbbb; margin-top: 10px;">
+            You are receiving this email because you subscribed to Prox Weekly Deals.
+        </p>
+    </div>
+
 </div>
 </body>
 </html>

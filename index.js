@@ -1,3 +1,7 @@
+// This script automates the process of ingesting deal data,
+// storing it in a Supabase database, and generating and
+// sending personalized "Weekly Deals" emails using the Resend API.
+
 // Required modules
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
@@ -21,25 +25,12 @@ const sampleUserData = JSON.parse(fs.readFileSync('./user_data.json', 'utf8'));
 const emailTemplate = fs.readFileSync('./emailTemplate.html', 'utf8');
 
 // Function to generate and "send" a personalized email to a single user
-async function generateAndSendEmail(user, allDeals) {
+async function generateAndSendEmail(user, deals, topDeals) {
     try {
-        // Step 1: Filter deals based on user preferences.
-        // This is the core personalization logic.
-        const userDeals = allDeals.filter(deal =>
-            user.preferred_retailer_ids.includes(deal.retailer.id)
-        );
+        // Step 1: Render the email template with the personalized deals.
+        const emailHtml = ejs.render(emailTemplate, { user, deals, topDeals });
 
-        // Step 2: Sort the filtered deals by price, from lowest to highest.
-        userDeals.sort((a, b) => a.price - b.price);
-
-        // NOTE: The previous version selected only the top 6 deals.
-        // As per the new requirement, we now send all available deals.
-        const allFilteredDeals = userDeals;
-
-        // Step 3: Render the email template with the personalized deals.
-        const emailHtml = ejs.render(emailTemplate, { deals: allFilteredDeals, user });
-
-        // Step 4: Use Resend API to send the email.
+        // Step 2: Use Resend API to send the email.
         await resend.emails.send({
             from: 'Prox Weekly Deals <onboarding@resend.dev>',
             to: `simonhe1714@gmail.com`,
@@ -47,7 +38,7 @@ async function generateAndSendEmail(user, allDeals) {
             html: emailHtml,
         });
 
-        // Step 5: Log the "sent" email to the console.
+        // Step 3: Log the "sent" email to the console.
         console.log(`\n--- Sending email to: ${user.email} ---`);
         console.log(`Email sent successfully to ${verifiedEmail} (for ${user.email})`);
     } catch (error) {
@@ -124,12 +115,12 @@ async function runAutomation() {
             .from('deals')
             .select(`
                 *,
-                retailer:retailer_id (name),
+                retailer:retailer_id (name, id),
                 product:product_id (name, size)
             `);
         if (dealsFetchError) throw dealsFetchError;
 
-        // Fetch users and their preferred retailer IDs
+        // Fetch users along with their preferred retailer names
         const { data: users, error: usersFetchError } = await supabase
             .from('users')
             .select('email, preferred_retailer_ids');
@@ -142,12 +133,30 @@ async function runAutomation() {
         if (retailersFetchError) throw retailersFetchError;
         const retailersMap = new Map(allRetailers.map(r => [r.id, r.name]));
 
+        // Get the top 6 deals from all retailers, sorted by price
+        const { data: topSixDeals, error: topSixDealsError } = await supabase
+            .from('deals')
+            .select(`
+                *,
+                retailer:retailer_id (name),
+                product:product_id (name, size)
+            `)
+            .order('price', { ascending: true })
+            .limit(6);
+        if (topSixDealsError) throw topSixDealsError;
+
         // Process each user's email
         for (const user of users) {
             const preferred_retailers = user.preferred_retailer_ids.map(id => retailersMap.get(id)).filter(name => name);
+            const userDeals = allDeals.filter(deal =>
+                user.preferred_retailer_ids.includes(deal.retailer.id)
+            );
+            userDeals.sort((a, b) => a.price - b.price);
+
             await generateAndSendEmail(
                 {...user, preferred_retailers},
-                allDeals
+                userDeals,
+                topSixDeals
             );
             // Add a 1-second delay to avoid Resend's rate limit
             await new Promise(resolve => setTimeout(resolve, 1000));

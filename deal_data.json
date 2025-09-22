@@ -1,0 +1,10 @@
+[
+  {"retailer":"Ralphs","product":"Boneless Skinless Chicken Breasts","size":"per lb","price":2.99,"start":"2025-09-01","end":"2025-09-07","category":"protein"},
+  {"retailer":"Vons","product":"Seedless Grapes (Red/Green)","size":"per lb","price":0.99,"start":"2025-09-01","end":"2025-09-07","category":"produce"},
+  {"retailer":"Smart & Final","product":"Tide HE Liquid (170 fl oz)","size":"170 fl oz","price":13.99,"start":"2025-09-01","end":"2025-09-07","category":"household"},
+  {"retailer":"Aldi","product":"Organic Blackberries","size":"6 oz","price":1.79,"start":"2025-09-01","end":"2025-09-07","category":"produce"},
+  {"retailer":"Whole Foods","product":"Organic Avocados","size":"each","price":1.49,"start":"2025-09-01","end":"2025-09-07","category":"produce"},
+  {"retailer":"Sprouts","product":"Wild Caught Salmon Fillet","size":"per lb","price":8.99,"start":"2025-09-01","end":"2025-09-07","category":"protein"},
+  {"retailer":"Walmart","product":"Great Value Milk (Gallon)","size":"1 gallon","price":2.78,"start":"2025-09-01","end":"2025-09-07","category":"dairy"},
+  {"retailer":"CVS","product":"Charmin Ultra Soft (12 pack)","size":"12 rolls","price":11.49,"start":"2025-09-01","end":"2025-09-07","category":"household"}
+]
